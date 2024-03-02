@@ -1,11 +1,18 @@
-
-
+## Start with package downloads and installs needed
 library(readxl)
-Acropora <- read_excel("Acropora.xlsx")
-View(Acropora)  
 
 install.packages("dplyr")
 library(dplyr)
+
+install.packages("tidyverse")
+library(tidyverse)
+library(ggplot2)
+
+########################################## Data Download and Prep #####################################################
+
+#Data download
+Acropora <- read_excel("Acropora.xlsx")
+View(Acropora)  
 
 ## Creating a separate data level to create depth ranges with labels 
 depth_ranges <- cut(Acropora$Relative_depth, breaks = c(0,3, 4.5,Inf), labels = c("Shallow", "Middle", "Deep"))
@@ -29,26 +36,9 @@ result_df <- rbind(result_df, new_row)
 # Display the updated result_df
 print(result_df)
 
-install.packages("tidyverse")
-library(tidyverse)
-library(ggplot2)
 
-## Graphing the results 
+############################################# Graphing the results #########################################################
 
-desired_order <- c("Shallow", "Middle", "Deep")
-result_df$depth_range <- factor(result_df$depth_range, levels = desired_order)
-
-ggplot(result_df, aes(x = as.factor(Bleaching_level), y = count, fill = as.factor(Bleaching_level))) +
-  geom_bar(stat = "identity") +
-  facet_wrap(~depth_range, scales = "free_y", nrow = 3, ncol = 1) +
-  labs(title = "Bleaching Levels at Depth Ranges",
-       x = "Bleaching Level",
-       y = "Abundance of Bleaching") +
-  scale_fill_manual(values = c("0" = "burlywood3", "1" = "burlywood2", "2" = "bisque1", "3" = "white"), name="Bleaching Level")
-
-
-
-### TRY AGAIN:
 desired_order <- c("Shallow", "Middle", "Deep")
 result_df$depth_range <- factor(result_df$depth_range, levels = desired_order)
 
@@ -82,7 +72,7 @@ ggplot(result_df2, aes(x = depth_range, y = percentage_bleached, fill = as.facto
   scale_fill_manual(values = c("0" = "burlywood3", "1" = "burlywood2", "2" = "bisque1", "3" = "white"), name="Bleaching Level") +
   ylim(0, 100) + theme_dark() 
 
-## Statistical Anlysis 
+################################## Statistical Anlysis ##############################################
 
 ##Chi_Square Test
 contingency_table <- xtabs(count ~ depth_range + Bleaching_level, data = result_df)
@@ -90,7 +80,7 @@ chi_square_result <- chisq.test(contingency_table)
 
 print(chi_square_result)
 
-##Anova (Didn't work)
+##Anova (Didn't work) 
 
 install.packages("car")
 library(car)
