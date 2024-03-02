@@ -1,4 +1,4 @@
-# Introduction
+# Data and Script Info
 Data obtained:Pioneer Bay 
 Data Type: Bleaching severity (0-3) and Depth
 
