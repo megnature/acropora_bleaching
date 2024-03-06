@@ -7,6 +7,7 @@ library(dplyr)
 install.packages("tidyverse")
 library(tidyverse)
 library(ggplot2)
+library(car)
 
 ########################################## Data Download and Prep #####################################################
 
@@ -35,6 +36,36 @@ result_df <- rbind(result_df, new_row)
 
 # Display the updated result_df
 print(result_df)
+
+####### Data Prep for average abundance data #######
+
+#### Group by depth range and find the average depth for reach transect
+transect_df <- Acropora %>%
+  group_by(Transect, depth_range) %>%
+  summarize(count = n())
+
+## calulating the average abundance for each depth range 
+summary_df <- transect_df %>%
+  group_by(depth_range) %>%
+  summarize(avg_abundance = mean(count),
+            sd_abundance = sd(count))
+
+########## Data Prep for depth range vairation at each site 
+## Site data frame
+site_df <- Acropora %>%
+  group_by(depth_range, Bleaching_level, Site) %>%
+  summarize(count = n())
+
+site_tbl <- as_tibble(site_df)
+
+# Calculate summary statistics for each depth range at each site
+summary_stats <- site_tbl %>%
+  group_by(Site, depth_range) %>%
+  summarize(
+    avg_abundance = mean(count),
+    sd_abundance = sd(count),
+    n = n()
+  )
 
 
 ############################################# Graphing the results #########################################################
@@ -72,6 +103,43 @@ ggplot(result_df2, aes(x = depth_range, y = percentage_bleached, fill = as.facto
   scale_fill_manual(values = c("0" = "burlywood3", "1" = "burlywood2", "2" = "bisque1", "3" = "white"), name="Bleaching Level") +
   ylim(0, 100) + theme_dark() 
 
+### Graphing the average abundance per depth range 
+desired_order <- c("Shallow", "Middle", "Deep")
+summary_df$depth_range <- factor(summary_df$depth_range, levels = desired_order)
+
+ggplot(summary_df, aes(x = depth_range, y = avg_abundance, fill = depth_range)) +
+  geom_bar(stat = "identity", position = "stack", color ="black") +
+  theme(axis.text.x = element_text(colour = "black")) +
+  theme(axis.text.y.left = element_text(colour = "black")) +
+  geom_errorbar(aes(ymin = avg_abundance - sd_abundance, ymax = avg_abundance + sd_abundance),
+                position = position_dodge(width = 0.9),
+                width = 0.25) +
+  labs(title = " ",
+       x = "Depth Range",
+       y = "Average Abundance (±SD)") +
+  scale_fill_manual(values = c("Shallow" = "lightcyan", "Middle" = "cyan3", "Deep" = "darkcyan"), name ="Depth Range") +
+  theme_dark()
+
+### Graphing site variation 
+
+# Create a bar plot with error bars for site comparison
+ggplot(summary_stats, aes(x = depth_range, y = avg_abundance, fill = factor(Site))) +
+  geom_bar(stat = "identity", position = "dodge", color = "black") +
+  theme(axis.text.x = element_text(colour = "black")) +
+  theme(axis.text.y.left = element_text(colour = "black")) +
+  geom_errorbar(aes(ymin = avg_abundance - sd_abundance, ymax = avg_abundance + sd_abundance),
+                position = position_dodge(width = 0.9),
+                width = 0.25) +
+  labs(title = " ",
+       x = "Depth Range",
+       y = "Average Abundance (±SD)") +
+  scale_fill_manual(values = c("1" = "pink", "2" = "lightgreen"), name = "Site", labels = c("1" = "South", "2" = "North")) +
+  theme_dark()+
+  coord_cartesian(ylim = c(-20, max(summary_stats$avg_abundance + summary_stats$sd_abundance)))
+
+
+
+
 ################################## Statistical Anlysis ##############################################
 
 ##Chi_Square Test
@@ -80,20 +148,14 @@ chi_square_result <- chisq.test(contingency_table)
 
 print(chi_square_result)
 
-##Anova (Didn't work) 
+##### Abundance statistical significance with Kruskal-Wallis test
 
-install.packages("car")
-library(car)
+kruskal.test(avg_abundance~ depth_range, data = summary_df)
 
-str(result_df)
+##### Site significane t-test 
 
-model <- lm(count ~ depth_range, data = result_df)
-anova_result <- Anova(model, type="III")
-print(anova_result)
+# Perform a t-test comparing coral abundance between sites
+t_test_result <- t.test(count ~ Site, data = site_tbl)
 
-model2 <- lm(count ~ depth_range * Bleaching_level, data = result_df)
 
-anova_result2 <- Anova(model2, type = "III")
-
-print(anova_result2)
 
